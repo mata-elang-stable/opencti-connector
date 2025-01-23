@@ -1,140 +1,136 @@
 import json
 from datetime import datetime
+from hashlib import sha256
+
+
+MAX_HOLD = 3600
 
 
 STORAGE = {}
 STORAGE_KAFKA = []
+HASH_STORAGE = set()
 
 
-def sendEventAggregation(timestamp):
+def sendEventAggregation():
+    deleted_key = []
 
-    delete_storage = []
-
-    for combination, events in STORAGE.items():
-        for event in events[:]:
-            # if (timestamp - event['time']).total_seconds() > 60:
-            if int(timestamp) - int(event['time']) > 60:
-                object = {}
-                object['src_address'] = combination[0]
-                object['src_port'] = combination[1]
-                object['dst_address'] = combination[2]
-                object['dst_port'] = combination[3]
-                object['protocol'] = combination[4]
-                object['message'] = combination[5]
-                object['classification'] = combination[6]
-                object['priority'] = combination[7]
-                object['start'] = event['start']
-                object['end'] = event['end']
-                object['base64'] = event['base64']
-                object['count'] = event['count']
-                STORAGE_KAFKA.append(object)
-                events.remove(event)
-            
-        if len(events) == 0:
-            delete_storage.append(combination)
-    
-    for combination in delete_storage:
-        del STORAGE[combination]
-     
-
-def eventAggregation(metric):
-    for data in metric['metrics']:
-
-        timestamp = datetime.strptime(data['snort_timestamp'], "%d/%m/%y-%H:%M:%S.%f")
-        
-        source_address = data['snort_src_address']
-        source_port = data['snort_src_ap'][data['snort_src_ap'].find(":") + 1::]
-        dest_address = data['snort_dst_address']
-        dest_port = data['snort_dst_ap'][data['snort_dst_ap'].find(":") + 1::]
-        combination = (source_address, source_port, dest_address, dest_port, metric['snort_protocol'], metric['snort_message'], metric['snort_classification'], metric['snort_priority'])
-
-        if combination in STORAGE:
-            for event in STORAGE[combination]:
-                include = False
-                if (timestamp - event['start']).total_seconds() < 60:
-                    if timestamp > event['end']:
-                        event['end'] = timestamp
-                    
-                    event['base64'].add(data['snort_base64_data'])
-
-                    # event['time'] = datetime.now()
-                    event['time'] = metric['snort_seconds']
-                    event['count'] += 1
-
-                    include = True
-                    break
-
-            if include == False:
-                event = {}
-                # event['time'] = datetime.now()
-                event['time'] = metric['snort_seconds']
-                event['start'] = timestamp
-                event['end'] = timestamp
-                event['base64'] = {data['snort_base64_data']}
-                event['count'] = 1
-                STORAGE[combination].append(event)
-
-        else:
-            STORAGE[combination] = []
+    for key, value in STORAGE.items():
+        if int(datetime.now().timestamp()) - value['last_updated'] > MAX_HOLD:
             event = {}
-            # event['time'] = datetime.now()
-            event['time'] = metric['snort_seconds']
-            event['start'] = timestamp
-            event['end'] = timestamp
-            event['count'] = 1
-            event['base64'] = {data['snort_base64_data']}
-            STORAGE[combination].append(event)
-        
+            event['src_address'] = value['src_address']
+            event['src_port'] = value['src_port']
+            event['dst_address'] = value['dest_address']
+            event['dst_port'] = value['dest_port']
+            event['protocol'] = value['protocol']
+            event['message'] = value['message']
+            event['classification'] = value['classification']
+            event['priority'] = value['priority']
+            event['start'] = str(datetime.fromtimestamp(value['start']))
+            event['end'] = str(datetime.fromtimestamp(value['start']))
+            event['base64'] = list(value['base64'])
+            event['count'] = value['count']
+            STORAGE_KAFKA.append(event)
+            deleted_key.append(key)
 
-def testing():
-    delete_storage = []
+    if len(deleted_key) > 0:
+        for key in deleted_key:
+            del STORAGE[key]
 
-    for combination, events in STORAGE.items():
-        for event in events[:]:
-            # if (timestamp - event['time']).total_seconds() > 60:
-            # if int(timestamp) - int(event['time']) > 60:
-            object = {}
-            object['src_address'] = combination[0]
-            object['src_port'] = combination[1]
-            object['dst_address'] = combination[2]
-            object['dst_port'] = combination[3]
-            object['protocol'] = combination[4]
-            object['message'] = combination[5]
-            object['classification'] = combination[6]
-            object['priority'] = combination[7]
-            object['start'] = event['start']
-            object['end'] = event['end']
-            object['base64'] = event['base64']
-            object['count'] = event['count']
-            STORAGE_KAFKA.append(object)
-            events.remove(event)
-            
-        if len(events) == 0:
-            delete_storage.append(combination)
+        combination_hashes = set([key.split(":")[0] for key in deleted_key])
+
+        for combination_hash in combination_hashes:
+            list_key = [key for key in STORAGE if key.startswith(combination_hash)]
+            if len(list_key) == 0:
+                HASH_STORAGE.remove(combination_hash)
+
+
+def checkAggregatableEvent(event):    
+    combination = (event['src_address'], event['src_port'], event['dst_address'], event['dst_port'], event['protocol'], event['message'], event['classification'], event['priority'])
+    combination_hash = sha256(str(combination).encode()).hexdigest()
+
+    if combination_hash not in HASH_STORAGE:
+        return False
     
-    for combination in delete_storage:
-        del STORAGE[combination]
+    list_key = [key for key in STORAGE if key.startswith(combination_hash)]
 
-    for i in STORAGE_KAFKA:
-        for key, value in i.items():
-            print(str(key) + ": " + str(value))
+    for key in list_key:
+        if event['timestamp'] >= STORAGE[key]['start'] - 60 and event['timestamp'] <= STORAGE[key]['end'] + 60:
+            STORAGE[key]['base64'].add(event['base64_data'])
+            STORAGE[key]['count'] += 1
+            STORAGE[key]['last_updated'] = int(datetime.now().timestamp())
+            STORAGE[key]['start'] = min(event['timestamp'], STORAGE[key]['start'])
+            STORAGE[key]['end'] = max(event['timestamp'], STORAGE[key]['end'])
+            return key
+    
+    return False
+    
+
+def createNewEvent(event):
+    # Change event 'timestamp' with event 'start' and event 'end'
+    event['start'] = event['timestamp']
+    event['end'] = event.pop('timestamp')
+
+    # Change base64 data from 'str' to 'set of str'
+    event['base64'] = {event.pop('base64_data')}
+
+    # Set the count of the event to 1
+    event['count'] = 1
+
+    # Set 'last_updated' to now()
+    event['last_updated'] = int(datetime.now().timestamp())
+
+    # Create combination hash from the event
+    combination = (event['src_address'], event['src_port'], event['dst_address'], event['dst_port'], event['protocol'], event['message'], event['classification'], event['priority'])
+    combination_hash = sha256(str(combination).encode()).hexdigest()
+    # Create the key for the event
+    hash_start_end = combination_hash + ":" + str(event['start']) + ":" + str(event['end'])
+
+    # Save the event in the STORAGE
+    STORAGE[hash_start_end] = event
+
+    # Save the hash in the HASH_STORAGE
+    HASH_STORAGE.add(combination_hash)  
+
+
+def updateKeyEvent(event_key):
+    updated_event = STORAGE.pop(event_key)
+    new_key = event_key.split(":")[0] + ":" + str(updated_event['start']) + ":" + str(updated_event['end'])
+    STORAGE[new_key] = updated_event
+
+
+def eventAggregation(metrics):
+    for metric in metrics['metrics']:
+        event = {}
+        event['timestamp'] = int(metrics['snort_seconds'])
+        event['src_address'] = metric['snort_src_address']
+        event['src_port'] = metric['snort_src_ap'][metric['snort_src_ap'].find(":") + 1::]
+        event['dst_address'] = metric['snort_dst_address']
+        event['dst_port'] = metric['snort_dst_ap'][metric['snort_dst_ap'].find(":") + 1::]
+        event['base64_data'] = metric['snort_base64_data']
+        event['protocol'] = metrics['snort_protocol']
+        event['message'] = metrics['snort_message']
+        event['classification'] = metrics['snort_classification']
+        event['priority'] = metrics['snort_priority']
+
+        found_event_key = checkAggregatableEvent(event)
         
-        print(" ")
+        if not found_event_key:
+            createNewEvent(event)
+        
+        elif STORAGE[found_event_key]['start'] != found_event_key.split(":")[1] or STORAGE[found_event_key]['end'] != found_event_key.split(":")[2]:
+            updateKeyEvent(found_event_key)
+
     
 
 if __name__ == "__main__":
-    # kafkaStream()
-    with open("data-test.json") as f:
-        metrics = json.load(f)
-        for metric in metrics:
-            eventAggregation(metric)
-            # sendEventAggregation(datetime.now())
-            sendEventAggregation(metric['snort_seconds'])
-
-    print(STORAGE)
-
-    print(" ")
-
-    testing()
-
+    with open("data-test-edited.json") as f:
+        data = json.load(f)
+        for metrics in data:
+            eventAggregation(metrics)
+            sendEventAggregation()
     
+    for key, value in STORAGE.items():
+        print(key)
+        for i, j in value.items():
+            print(i, j)
+        print(" ")
