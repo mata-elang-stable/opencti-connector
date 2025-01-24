@@ -1,13 +1,12 @@
-import json
 from datetime import datetime
 from hashlib import sha256
+from kafka_producer_opencti_event import produceOpenCTIEvent
 
 
-MAX_HOLD = 3600
+MAX_HOLD = 30
 
 
 STORAGE = {}
-STORAGE_KAFKA = []
 HASH_STORAGE = set()
 
 
@@ -19,17 +18,19 @@ def sendEventAggregation():
             event = {}
             event['src_address'] = value['src_address']
             event['src_port'] = value['src_port']
-            event['dst_address'] = value['dest_address']
-            event['dst_port'] = value['dest_port']
+            event['dst_address'] = value['dst_address']
+            event['dst_port'] = value['dst_port']
             event['protocol'] = value['protocol']
             event['message'] = value['message']
             event['classification'] = value['classification']
             event['priority'] = value['priority']
             event['start'] = str(datetime.fromtimestamp(value['start']))
-            event['end'] = str(datetime.fromtimestamp(value['start']))
+            event['end'] = str(datetime.fromtimestamp(value['end']))
             event['base64'] = list(value['base64'])
             event['count'] = value['count']
-            STORAGE_KAFKA.append(event)
+            
+            produceOpenCTIEvent(event)
+            
             deleted_key.append(key)
 
     if len(deleted_key) > 0:
@@ -119,18 +120,3 @@ def eventAggregation(metrics):
         
         elif STORAGE[found_event_key]['start'] != found_event_key.split(":")[1] or STORAGE[found_event_key]['end'] != found_event_key.split(":")[2]:
             updateKeyEvent(found_event_key)
-
-    
-
-if __name__ == "__main__":
-    with open("data-test-edited.json") as f:
-        data = json.load(f)
-        for metrics in data:
-            eventAggregation(metrics)
-            sendEventAggregation()
-    
-    for key, value in STORAGE.items():
-        print(key)
-        for i, j in value.items():
-            print(i, j)
-        print(" ")
