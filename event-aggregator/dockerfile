@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY event_aggregator.py .
+COPY kafka_consumer_sensor_event.py .
+COPY kafka_producer_opencti_event.py .
+COPY sensor_event_pb2.py .
+COPY requirements.txt .
+
+RUN apt update && apt install -y --no-install-recommends \
+    gcc \
+    librdkafka-dev \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "./kafka_consumer_sensor_event.py"]
+
+

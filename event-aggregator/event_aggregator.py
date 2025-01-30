@@ -3,7 +3,7 @@ from hashlib import sha256
 from kafka_producer_opencti_event import produceOpenCTIEvent
 
 
-MAX_HOLD = 30
+MAX_HOLD = 3600
 
 
 STORAGE = {}

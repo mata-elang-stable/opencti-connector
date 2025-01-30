@@ -1,1 +1,3 @@
-__pycache__/
+event-aggregator/__pycache__/
+event-aggregator/protobuf/__pycache__
+logs/

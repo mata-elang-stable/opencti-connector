@@ -1,0 +1,12 @@
+services:
+  opencti-me-event-aggregator:
+    build: event-aggregator/.
+    restart: always
+    container_name: opencti-me-event-aggregator
+    network_mode: "host"
+    environment:
+      - KAFKA_URL=10.10.10.61:9093
+      - KAFKA_CONSUMER_GROUP_ID=opencti
+      - KAFKA_TOPIC=sensor_events
+    volumes:
+      - ./logs:/app/logs

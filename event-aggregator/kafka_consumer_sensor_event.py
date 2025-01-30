@@ -1,13 +1,15 @@
-from event_aggregator import eventAggregation, sendEventAggregation, STORAGE, HASH_STORAGE
-
+from event_aggregator import eventAggregation, sendEventAggregation
 import sensor_event_pb2
-
 from confluent_kafka import Consumer
 from confluent_kafka.serialization import SerializationContext, MessageField
 from confluent_kafka.schema_registry.protobuf import ProtobufDeserializer
-
 from google.protobuf.json_format import MessageToDict
+import os
 
+
+KAFKA_URL = os.getenv('KAFKA_URL')
+KAFKA_CONSUMER_GROUP_ID = os.getenv('KAFKA_CONSUMER_GROUP_ID')
+KAFKA_TOPIC = os.getenv('KAFKA_TOPIC')
 
 protobuf_deserializer = ProtobufDeserializer(sensor_event_pb2.SensorEvent, {'use.deprecated.format': False})
 
@@ -15,13 +17,13 @@ protobuf_deserializer = ProtobufDeserializer(sensor_event_pb2.SensorEvent, {'use
 def kafkaStream():
     
     config = {
-        'bootstrap.servers': 'localhost:9093',
-        'group.id': 'opencti',
+        'bootstrap.servers': KAFKA_URL,
+        'group.id': KAFKA_CONSUMER_GROUP_ID,
         'auto.offset.reset': 'earliest'
     }
 
     consumer = Consumer(config)
-    topic = "sensor_events"
+    topic = KAFKA_TOPIC
     consumer.subscribe([topic])
 
     try:
@@ -32,10 +34,9 @@ def kafkaStream():
 
             if message is None:
                 sendEventAggregation()
-                print("Data on Storage: " + str(len(STORAGE)) + ", Total Hash: " + str(len(HASH_STORAGE)))
 
             elif message.error():
-                print("ERROR: " + message.error().decode('utf-8'))
+                print("ERROR: " + message.error())
                 
             else:
                 sensor_event = protobuf_deserializer(message.value(), SerializationContext(topic, MessageField.VALUE))
