@@ -3,7 +3,7 @@ from hashlib import sha256
 from kafka_producer_opencti_event import produceOpenCTIEvent
 
 
-MAX_HOLD = 3600
+MAX_HOLD = 30
 
 
 STORAGE = {}
@@ -24,6 +24,7 @@ def sendEventAggregation():
             event['message'] = value['message']
             event['classification'] = value['classification']
             event['priority'] = value['priority']
+            event['reference'] = value['reference']
             event['start'] = str(datetime.fromtimestamp(value['start']))
             event['end'] = str(datetime.fromtimestamp(value['end']))
             event['base64'] = list(value['base64'])
@@ -112,6 +113,7 @@ def eventAggregation(metrics):
         event['message'] = metrics['snort_message']
         event['classification'] = metrics['snort_classification']
         event['priority'] = metrics['snort_priority']
+        event['reference'] = "https://www.snort.org/rule_docs/" + metrics['snort_rule_gid'] + "-" + metrics['snort_rule_sid']
 
         found_event_key = checkAggregatableEvent(event)
         

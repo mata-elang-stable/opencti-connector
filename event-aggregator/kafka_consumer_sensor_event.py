@@ -36,7 +36,7 @@ def kafkaStream():
                 sendEventAggregation()
 
             elif message.error():
-                print("ERROR: " + message.error())
+                print("ERROR: " + str(message.error()))
                 
             else:
                 sensor_event = protobuf_deserializer(message.value(), SerializationContext(topic, MessageField.VALUE))
