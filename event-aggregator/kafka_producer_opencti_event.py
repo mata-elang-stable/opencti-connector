@@ -1,10 +1,13 @@
 import json
 from confluent_kafka import Producer
-
+import os
 
 def produceOpenCTIEvent(event):
+
+    KAFKA_URL = os.getenv('KAFKA_URL')
+
     config = {
-        'bootstrap.servers': 'localhost:9093',  
+        'bootstrap.servers': KAFKA_URL,  
         'client.id': 'opencti-produce-event'
     }
 
