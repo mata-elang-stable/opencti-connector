@@ -103,11 +103,11 @@ def eventAggregation(metrics):
     for metric in metrics['metrics']:
         event = {}
         event['timestamp'] = int(metrics['snort_seconds'])
-        event['src_address'] = metric['snort_src_address']
-        event['src_port'] = metric['snort_src_ap'][metric['snort_src_ap'].find(":") + 1::]
-        event['dst_address'] = metric['snort_dst_address']
-        event['dst_port'] = metric['snort_dst_ap'][metric['snort_dst_ap'].find(":") + 1::]
-        event['base64_data'] = metric['snort_base64_data']
+        event['src_address'] = metric.get('snort_src_address', '')
+        event['src_port'] = metric['snort_src_ap'].split(":")[1] if 'snort_src_ap' in metric else 0
+        event['dst_address'] = metric.get('snort_dst_address', '')
+        event['dst_port'] = metric['snort_dst_ap'].split(":")[1] if 'snort_dst_ap' in metric else 0
+        event['base64_data'] = metric.get('snort_base64_data', '')
         event['protocol'] = metrics['snort_protocol']
         event['message'] = metrics['snort_message']
         event['classification'] = metrics['snort_classification']
