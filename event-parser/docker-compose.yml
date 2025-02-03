@@ -1,0 +1,20 @@
+services:
+  opencti-me2-event-parser:
+    build: .
+    container_name: opencti-me2-event-parser
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_API_KEY=${OPENCTI_API_KEY}
+      - KAFKA_URL=${KAFKA_URL}
+      - KAFKA_CONSUMER_GROUP_ID=${KAFKA_CONSUMER_GROUP_ID}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - opencti-me2-event-parser
+    restart: always
+
+networks:
+  opencti-me2-event-parser:
+    driver: bridge
+    
