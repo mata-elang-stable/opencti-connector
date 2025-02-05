@@ -61,10 +61,10 @@ def createOrReadAttackPattern(attack_pattern):
             name = attack_pattern
         )
         return attack_pattern['standard_id']
-    
+
 def createOrReadIPv4(ip_address):
-    if ip_address == " " :
-        return " "
+    if ip_address == "" :
+        return ""
     ipv4_search = opencti_api_client.query('''
         query stixCyberObservable {
             stixCyberObservables(
@@ -104,7 +104,7 @@ def createOrReadIPv4(ip_address):
             }
         ''')
         return ipv4['data']['stixCyberObservableAdd']['standard_id']
-    
+
 def createOrReadArtifact(base64file):
     artifact_search = opencti_api_client.query('''
         query stixCyberObservable {
@@ -225,16 +225,17 @@ def createOpenCTIObject(data):
 
     arr_artifact_id = []
     for base64_file in data['base64']:
-        artifact_id = createOrReadArtifact(base64_file)
-        arr_artifact_id.append(artifact_id)
+        if base64_file != "":
+            artifact_id = createOrReadArtifact(base64_file)
+            arr_artifact_id.append(artifact_id)
 
     network_traffic_id = createNetworkTraffic(
-        start_time_iso, 
-        end_time_iso, 
-        source_ip_id, 
-        src_port, 
-        destination_ip_id, 
-        dst_port, 
+        start_time_iso,
+        end_time_iso,
+        source_ip_id,
+        src_port,
+        destination_ip_id,
+        dst_port,
         data['protocol']
         )
 
@@ -261,13 +262,14 @@ def createOpenCTIObject(data):
         relationship_type = "related-to"
     )
 
-    opencti_api_client.stix_core_relationship.create(
-        fromId = indicator_id,
-        fromTypes = ["Indicator"],
-        toId = source_ip_id,
-        toTypes = ["IPv4-Addr"],
-        relationship_type = "related-to"
-    )
+    if source_ip_id != "":
+        opencti_api_client.stix_core_relationship.create(
+            fromId = indicator_id,
+            fromTypes = ["Indicator"],
+            toId = source_ip_id,
+            toTypes = ["IPv4-Addr"],
+            relationship_type = "related-to"
+        )
 
     for artifact_id in arr_artifact_id:
         opencti_api_client.stix_core_relationship.create(
@@ -309,4 +311,4 @@ def kafkaStream():
 
 if __name__ == "__main__":
     kafkaStream()
-    
+

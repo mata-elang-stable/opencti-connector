@@ -7,7 +7,7 @@ def produceOpenCTIEvent(event):
     KAFKA_URL = os.getenv('KAFKA_URL')
 
     config = {
-        'bootstrap.servers': KAFKA_URL,  
+        'bootstrap.servers': KAFKA_URL,
         'client.id': 'opencti-produce-event'
     }
 

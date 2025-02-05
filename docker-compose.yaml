@@ -1,12 +1,36 @@
 services:
-  opencti-me-event-aggregator:
-    build: event-aggregator/.
+  opencti-me2-event-aggregator:
+    build:
+      context: .
+      target: event-aggregator
     restart: always
-    container_name: opencti-me-event-aggregator
+    container_name: opencti-me2-event-aggregator
     network_mode: "host"
+    env_file:
+      - ./event-aggregator/.env
     environment:
-      - KAFKA_URL=10.10.10.61:9093
-      - KAFKA_CONSUMER_GROUP_ID=opencti-aggr
-      - KAFKA_TOPIC=sensor_events
-    volumes:
-      - ./logs:/app/logs
+      - KAFKA_URL=${KAFKA_URL}
+      - KAFKA_CONSUMER_GROUP_ID=${KAFKA_CONSUMER_GROUP_ID}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+    command: ["-u", "event-aggregator.py"]
+  opencti-me2-event-parser:
+    build:
+      context: .
+      target: event-parser
+    container_name: opencti-me2-event-parser
+    env_file:
+      - ./event-parser/.env
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_API_KEY=${OPENCTI_API_KEY}
+      - KAFKA_URL=${KAFKA_URL}
+      - KAFKA_CONSUMER_GROUP_ID=${KAFKA_CONSUMER_GROUP_ID}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+    networks:
+      - opencti-me2-event-parser
+    restart: always
+    command: ["-u", "event-parser.py"]
+
+networks:
+  opencti-me2-event-parser:
+    driver: bridge
