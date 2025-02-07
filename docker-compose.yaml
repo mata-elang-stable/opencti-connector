@@ -12,7 +12,7 @@ services:
       - KAFKA_URL=${KAFKA_URL}
       - KAFKA_CONSUMER_GROUP_ID=${KAFKA_CONSUMER_GROUP_ID}
       - KAFKA_TOPIC=${KAFKA_TOPIC}
-    command: ["-u", "event-aggregator.py"]
+    command: ["-u", "kafka_consumer_sensor_event.py"]
   opencti-me2-event-parser:
     build:
       context: .
@@ -29,7 +29,7 @@ services:
     networks:
       - opencti-me2-event-parser
     restart: always
-    command: ["-u", "event-parser.py"]
+    command: ["-u", "event_parser.py"]
 
 networks:
   opencti-me2-event-parser:
