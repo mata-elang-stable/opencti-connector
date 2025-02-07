@@ -13,13 +13,12 @@ ENTRYPOINT [ "python" ]
 
 FROM base AS event-aggregator
 
-COPY event_aggregator/event_aggregator.py .
-COPY event_aggregator/kafka_consumer_sensor_event.py .
-COPY event_aggregator/kafka_producer_opencti_event.py .
-COPY event_aggregator/ensor_event_pb2.py .
+COPY event-aggregator/event_aggregator.py .
+COPY event-aggregator/kafka_consumer_sensor_event.py .
+COPY event-aggregator/kafka_producer_opencti_event.py .
+COPY event-aggregator/sensor_event_pb2.py .
 
 
 FROM base AS event-parser
 
-COPY event_parser/event_parser.py .
-
+COPY event-parser/event_parser.py ./event_parser.py
