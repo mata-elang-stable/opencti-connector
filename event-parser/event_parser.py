@@ -5,12 +5,14 @@ from confluent_kafka import Consumer
 import base64
 import hashlib
 import os
+import ipaddress
 
 OPENCTI_URL = os.getenv("OPENCTI_URL")
 OPENCTI_API_KEY = os.getenv("OPENCTI_API_KEY")
 KAFKA_URL = os.getenv("KAFKA_URL")
 KAFKA_CONSUMER_GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP_ID")
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC")
+
 
 opencti_api_client = OpenCTIApiClient(OPENCTI_URL, OPENCTI_API_KEY)
 
@@ -63,8 +65,6 @@ def createOrReadAttackPattern(attack_pattern):
         return attack_pattern['standard_id']
 
 def createOrReadIPv4(ip_address):
-    if ip_address == "" :
-        return ""
     ipv4_search = opencti_api_client.query('''
         query stixCyberObservable {
             stixCyberObservables(
@@ -104,6 +104,47 @@ def createOrReadIPv4(ip_address):
             }
         ''')
         return ipv4['data']['stixCyberObservableAdd']['standard_id']
+
+def createOrReadIPv6(ip_address):
+    ipv6_search = opencti_api_client.query('''
+        query stixCyberObservable {
+            stixCyberObservables(
+                types: ["IPv6-Addr"],
+                filters: {
+                    mode: and,
+                    filters: {
+                        key: "value",
+                        values: ["'''+ip_address+'''"],
+                        operator: eq
+                    },
+                    filterGroups: []
+                }
+            )
+            {
+                edges {
+                    node {
+                        standard_id
+                    }
+                }
+            }
+        }
+    ''')
+    if len(ipv6_search['data']['stixCyberObservables']['edges']) > 0:
+        return ipv6_search['data']['stixCyberObservables']['edges'][0]['node']['standard_id']
+    else:
+        ipv6 = opencti_api_client.query('''
+            mutation stixCyberObservableAdd {
+                stixCyberObservableAdd (
+                                    type: "IPv6-Addr",
+                    IPv6Addr: {
+                        value: "'''+ip_address+'''"
+                    }
+                ) {
+                    standard_id
+                }
+            }
+        ''')
+        return ipv6['data']['stixCyberObservableAdd']['standard_id']
 
 def createOrReadArtifact(base64file):
     artifact_search = opencti_api_client.query('''
@@ -218,8 +259,24 @@ def createOpenCTIObject(data):
     src_port = str(data['src_port']) if data.get('src_port') else "0"
     dst_port = str(data['dst_port']) if data.get('dst_port') else "0"
 
-    source_ip_id = createOrReadIPv4(data['src_address'])
-    destination_ip_id = createOrReadIPv4(data['dst_address'])
+    src_ip_obj = ipaddress.ip_address(data['src_address'])
+    if isinstance(src_ip_obj, ipaddress.IPv4Address):
+        source_ip_id = createOrReadIPv4(data['src_address'])
+        source_ip_type = "IPv4-Addr"
+    elif isinstance(src_ip_obj, ipaddress.IPv6Address):
+        source_ip_id = createOrReadIPv6(data['src_address'])
+        source_ip_type = "IPv6-Addr"
+    else:
+        source_ip_id = ""
+
+    dst_ip_obj = ipaddress.ip_address(data['dst_address'])
+    if isinstance(dst_ip_obj, ipaddress.IPv4Address):
+        destination_ip_id = createOrReadIPv4(data['dst_address'])
+    elif isinstance(dst_ip_obj, ipaddress.IPv6Address):
+        destination_ip_id = createOrReadIPv6(data['dst_address'])
+    else:
+        destination_ip_id = ""
+
     indicator_id = createOrReadIndicator(data['message'], data['reference'])
     attack_pattern_id = createOrReadAttackPattern(data['classification'])
 
@@ -229,14 +286,15 @@ def createOpenCTIObject(data):
             artifact_id = createOrReadArtifact(base64_file)
             arr_artifact_id.append(artifact_id)
 
-    network_traffic_id = createNetworkTraffic(
-        start_time_iso,
-        end_time_iso,
-        source_ip_id,
-        src_port,
-        destination_ip_id,
-        dst_port,
-        data['protocol']
+    if source_ip_id or destination_ip_id != "":
+        network_traffic_id = createNetworkTraffic(
+            start_time_iso,
+            end_time_iso,
+            source_ip_id,
+            src_port,
+            destination_ip_id,
+            dst_port,
+            data['protocol']
         )
 
     # create label and adding label to objects opencti
@@ -267,7 +325,7 @@ def createOpenCTIObject(data):
             fromId = indicator_id,
             fromTypes = ["Indicator"],
             toId = source_ip_id,
-            toTypes = ["IPv4-Addr"],
+            toTypes = [source_ip_type],
             relationship_type = "related-to"
         )
 
@@ -308,6 +366,7 @@ def kafkaStream():
         print("Closing consumer...")
         consumer.commit()
         consumer.close()
+
 
 if __name__ == "__main__":
     kafkaStream()
