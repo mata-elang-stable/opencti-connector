@@ -266,17 +266,13 @@ def createOpenCTIObject(data):
     elif isinstance(src_ip_obj, ipaddress.IPv6Address):
         source_ip_id = createOrReadIPv6(data['src_address'])
         source_ip_type = "IPv6-Addr"
-    else:
-        source_ip_id = ""
 
     dst_ip_obj = ipaddress.ip_address(data['dst_address'])
     if isinstance(dst_ip_obj, ipaddress.IPv4Address):
         destination_ip_id = createOrReadIPv4(data['dst_address'])
     elif isinstance(dst_ip_obj, ipaddress.IPv6Address):
         destination_ip_id = createOrReadIPv6(data['dst_address'])
-    else:
-        destination_ip_id = ""
-
+    
     indicator_id = createOrReadIndicator(data['message'], data['reference'])
     attack_pattern_id = createOrReadAttackPattern(data['classification'])
 
@@ -286,16 +282,15 @@ def createOpenCTIObject(data):
             artifact_id = createOrReadArtifact(base64_file)
             arr_artifact_id.append(artifact_id)
 
-    if source_ip_id or destination_ip_id != "":
-        network_traffic_id = createNetworkTraffic(
-            start_time_iso,
-            end_time_iso,
-            source_ip_id,
-            src_port,
-            destination_ip_id,
-            dst_port,
-            data['protocol']
-        )
+    network_traffic_id = createNetworkTraffic(
+        start_time_iso,
+        end_time_iso,
+        source_ip_id,
+        src_port,
+        destination_ip_id,
+        dst_port,
+        data['protocol']
+    )
 
     # create label and adding label to objects opencti
     prior_label_id = createOrReadLabel(data['priority'])
@@ -358,8 +353,10 @@ def kafkaStream():
                 print("ERROR: " + str(message.error()))
             else:
                 data = json.loads(message.value())
-                print(data)
-                createOpenCTIObject(data)
+                if data.get('src_address') != '' and data.get('dst_address') != '' :
+                    createOpenCTIObject(data)
+                    data.pop('base64', None)
+                    print(data)
     except KeyboardInterrupt:
         print('Process interrupted. Waiting for current operation to finish...')
     finally:

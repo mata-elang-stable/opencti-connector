@@ -14,3 +14,6 @@ def produceOpenCTIEvent(event):
     producer = Producer(config)
     producer.produce('opencti_events', key='event_key', value=json.dumps(event))
     producer.flush()
+    event.pop('base64', None)
+    print(event)
+    

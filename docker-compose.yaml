@@ -1,36 +1,42 @@
 services:
-  opencti-me2-event-aggregator:
+  opencti-connector-aggregator:
+    image: ghcr.io/mata-elang-stable/opencti-connector-aggregator:latest
     build:
       context: .
       target: event-aggregator
-    restart: always
-    container_name: opencti-me2-event-aggregator
-    network_mode: "host"
+    restart: unless-stoped
+    container_name: opencti-connector-aggregator
     env_file:
       - ./event-aggregator/.env
-    environment:
-      - KAFKA_URL=${KAFKA_URL}
-      - KAFKA_CONSUMER_GROUP_ID=${KAFKA_CONSUMER_GROUP_ID}
-      - KAFKA_TOPIC=${KAFKA_TOPIC}
     command: ["-u", "kafka_consumer_sensor_event.py"]
-  opencti-me2-event-parser:
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 10s
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
+  opencti-connector-parser:
+    image: ghcr.io/mata-elang-stable/opencti-connector-parser:latest
     build:
       context: .
       target: event-parser
-    container_name: opencti-me2-event-parser
+    container_name: opencti-connector-parser
     env_file:
       - ./event-parser/.env
-    environment:
-      - OPENCTI_URL=${OPENCTI_URL}
-      - OPENCTI_API_KEY=${OPENCTI_API_KEY}
-      - KAFKA_URL=${KAFKA_URL}
-      - KAFKA_CONSUMER_GROUP_ID=${KAFKA_CONSUMER_GROUP_ID}
-      - KAFKA_TOPIC=${KAFKA_TOPIC}
-    networks:
-      - opencti-me2-event-parser
-    restart: always
+    restart: unless-stoped
     command: ["-u", "event_parser.py"]
-
-networks:
-  opencti-me2-event-parser:
-    driver: bridge
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 10s
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
