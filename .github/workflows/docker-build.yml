@@ -58,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./dockerfiles/debian.dockerfile
+          file: ./Dockerfile
           platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
           push: ${{ github.event_name != 'pull_request' }}
           builder: ${{ env.BUILDER_NAME }}
