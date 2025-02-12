@@ -14,7 +14,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   BUILDER_NAME: mybuilder
-  BUILD_PLATFORMS_TARGET: linux/amd64,linux/arm64
+  BUILD_PLATFORMS_TARGET: linux/amd64
+
 
 permissions:
   contents: read
@@ -23,7 +24,7 @@ permissions:
   id-token: write
 
 jobs:
-  build-debian:
+  build-image:
     runs-on: image-builder
     steps:
       - name: Checkout repository
