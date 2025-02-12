@@ -1,14 +1,15 @@
 services:
   opencti-connector-aggregator:
-    image: ghcr.io/mata-elang-stable/opencti-connector-aggregator:latest
+    image: ghcr.io/mata-elang-stable/opencti-connector:latest
     build:
       context: .
       target: event-aggregator
     restart: unless-stoped
     container_name: opencti-connector-aggregator
+    environment:
+      - SERVICE=event-aggregator
     env_file:
       - ./event-aggregator/.env
-    command: ["-u", "kafka_consumer_sensor_event.py"]
     deploy:
       mode: replicated
       replicas: 1
@@ -21,15 +22,16 @@ services:
           memory: 256M
 
   opencti-connector-parser:
-    image: ghcr.io/mata-elang-stable/opencti-connector-parser:latest
+    image: ghcr.io/mata-elang-stable/opencti-connector:latest
     build:
       context: .
       target: event-parser
     container_name: opencti-connector-parser
+    environment:
+      - SERVICE=event-parser
     env_file:
       - ./event-parser/.env
     restart: unless-stoped
-    command: ["-u", "event_parser.py"]
     deploy:
       mode: replicated
       replicas: 1
