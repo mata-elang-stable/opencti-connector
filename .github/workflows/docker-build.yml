@@ -12,7 +12,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME_AGGREGATOR: ${{ github.repository }}-aggregator
+  IMAGE_NAME_PARSER: ${{ github.repository }}-parser
   BUILDER_NAME: mybuilder
   BUILD_PLATFORMS_TARGET: linux/amd64
 
@@ -38,12 +39,23 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
+      - name: Extract metadata (tags, labels) for Docker for service aggregator
+        id: meta-aggregator
         if: github.event_name != 'pull_request'
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AGGREGATOR }}
+          flavor: |
+            latest=auto
+            prefix=
+            suffix=
+
+      - name: Extract metadata (tags, labels) for Docker for service parser
+        id: meta-parser
+        if: github.event_name != 'pull_request'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PARSER }}
           flavor: |
             latest=auto
             prefix=
@@ -63,8 +75,8 @@ jobs:
           platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
           push: ${{ github.event_name != 'pull_request' }}
           builder: ${{ env.BUILDER_NAME }}
-          tags: ${{ steps.meta.outputs.tags }}-aggregator
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-aggregator.outputs.tags }}
+          labels: ${{ steps.meta-aggregator.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -78,8 +90,8 @@ jobs:
           platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
           push: ${{ github.event_name != 'pull_request' }}
           builder: ${{ env.BUILDER_NAME }}
-          tags: ${{ steps.meta.outputs.tags }}-parser
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-parser.outputs.tags }}
+          labels: ${{ steps.meta-parser.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
