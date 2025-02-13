@@ -54,7 +54,7 @@ jobs:
         uses: crazy-max/ghaction-github-runtime@v3
 
       - name: Build for Service opencti-connector-aggregator
-        id: push
+        id: push-aggregator
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -69,7 +69,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build for Service opencti-connector-parser
-        id: push
+        id: push-parser
         uses: docker/build-push-action@v6
         with:
           context: .
