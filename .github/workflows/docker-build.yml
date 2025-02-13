@@ -53,16 +53,32 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: crazy-max/ghaction-github-runtime@v3
 
-      - name: Build
+      - name: Build for Service opencti-connector-aggregator
         id: push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          targets: event-aggregator
           platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
           push: ${{ github.event_name != 'pull_request' }}
           builder: ${{ env.BUILDER_NAME }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}-aggregator
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build for Service opencti-connector-parser
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          targets: event-parser
+          platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
+          push: ${{ github.event_name != 'pull_request' }}
+          builder: ${{ env.BUILDER_NAME }}
+          tags: ${{ steps.meta.outputs.tags }}-parser
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
