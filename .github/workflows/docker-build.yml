@@ -99,7 +99,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}-aggregator
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AGGREGATOR}}
           subject-digest: ${{ steps.push-aggregator.outputs.digest }}
           push-to-registry: true
 
@@ -107,6 +107,6 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}-parser
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PARSER}}
           subject-digest: ${{ steps.push-parser.outputs.digest }}
           push-to-registry: true
