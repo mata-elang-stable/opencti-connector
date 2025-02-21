@@ -71,7 +71,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          targets: event-aggregator
+          target: event-aggregator
           platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
           push: ${{ github.event_name != 'pull_request' }}
           builder: ${{ env.BUILDER_NAME }}
@@ -86,7 +86,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          targets: event-parser
+          target: event-parser
           platforms: ${{ env.BUILD_PLATFORMS_TARGET }}
           push: ${{ github.event_name != 'pull_request' }}
           builder: ${{ env.BUILDER_NAME }}
