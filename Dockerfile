@@ -1,5 +1,7 @@
 FROM python:3.12-slim AS base
 
+WORKDIR /app
+
 RUN apt update && apt-get install -y --no-install-recommends \
     gcc \
     librdkafka-dev \
@@ -7,15 +9,12 @@ RUN apt update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /app
+RUN pip install --no-cache-dir -r requirements.txt
 
 ENTRYPOINT [ "python" ]
 
 FROM base AS event-aggregator
-
-WORKDIR /app
 
 COPY event-aggregator/event_aggregator.py .
 COPY event-aggregator/kafka_consumer_sensor_event.py .

@@ -46,7 +46,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AGGREGATOR }}
           flavor: |
-            latest=auto
+            latest=true
             prefix=
             suffix=
 
@@ -57,7 +57,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PARSER }}
           flavor: |
-            latest=auto
+            latest=true
             prefix=
             suffix=
 
