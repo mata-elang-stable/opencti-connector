@@ -4,7 +4,7 @@ services:
     build:
       context: .
       target: event-aggregator
-    restart: unless-stoped
+    restart: unless-stopped
     container_name: opencti-connector-aggregator
     env_file:
       - ./event-aggregator/.env
@@ -28,7 +28,7 @@ services:
     container_name: opencti-connector-parser
     env_file:
       - ./event-parser/.env
-    restart: unless-stoped
+    restart: unless-stopped
     command: ["-u", "event_parser.py"]
     deploy:
       mode: replicated
